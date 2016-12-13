@@ -107,6 +107,8 @@ detect and mark faces it it, and print the final image to STDOUT.
 
 The bot will execute this script, get bytes of the result, and respond back to the user.
 
+![screen shot 2016-12-13 at 16 39 58](https://cloud.githubusercontent.com/assets/185988/21133426/162b97c6-c15c-11e6-8b4b-7ec9f1805829.png)
+
 ## run:
 
 Execute the binary file:
