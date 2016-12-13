@@ -103,7 +103,7 @@ print cv2.imencode('.jpg', image)[1].tostring()
 
 It captures an image through Raspberry Pi camera module,
 
-detect and mark faces it it, and print the final image to STDOUT.
+detect and mark faces in it, and print the final image to STDOUT.
 
 The bot will execute this script, get bytes of the result, and respond back to the user.
 
