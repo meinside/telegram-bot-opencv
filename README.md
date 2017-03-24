@@ -12,8 +12,8 @@ A telegram bot for testing OpenCV scripts **remotely** and **headlessly**.
 ## how to get & build:
 
 ```bash
-$ git clone https://github.com/meinside/telegram-bot-opencv.git
-$ cd telegram-bot-opencv/
+$ go get -d github.com/meinside/telegram-bot-opencv
+$ cd $GOPATH/src/github.com/meinside/telegram-bot-opencv
 $ go build
 ```
 
