@@ -160,12 +160,12 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
 	var userId string
 	if update.Message.From.Username == nil {
-		log.Printf("*** Not allowed (no user name): %s\n", *update.Message.From.FirstName)
+		log.Printf("*** Not allowed (no user name): %s", update.Message.From.FirstName)
 		return false
 	}
 	userId = *update.Message.From.Username
 	if !isAvailableId(userId) {
-		log.Printf("*** Id not allowed: %s\n", userId)
+		log.Printf("*** Id not allowed: %s", userId)
 		return false
 	}
 
@@ -214,10 +214,10 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			b.SendChatAction(update.Message.Chat.Id, bot.ChatActionTyping)
 
 			// send message
-			if sent := b.SendMessage(update.Message.Chat.Id, &message, options); sent.Ok {
+			if sent := b.SendMessage(update.Message.Chat.Id, message, options); sent.Ok {
 				result = true
 			} else {
-				log.Printf("*** Failed to send message: %s\n", *sent.Description)
+				log.Printf("*** Failed to send message: %s", *sent.Description)
 			}
 		} else {
 			// push to execute request channel
@@ -227,7 +227,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			}
 		}
 	} else {
-		log.Printf("*** Session does not exist for id: %s\n", userId)
+		log.Printf("*** Session does not exist for id: %s", userId)
 	}
 	pool.Unlock()
 
@@ -248,12 +248,12 @@ func processExecuteRequest(b *bot.Bot, request ExecuteRequest) bool {
 	// execute script, read its output, and send it to the client
 	if bytes, err := exec.Command(scriptPath).CombinedOutput(); err != nil {
 		message := fmt.Sprintf("Error running script: %s (%s)", err, string(bytes))
-		log.Printf("*** %s\n", message)
+		log.Printf("*** %s", message)
 
-		if sent := b.SendMessage(request.ChatId, &message, request.MessageOptions); sent.Ok {
+		if sent := b.SendMessage(request.ChatId, message, request.MessageOptions); sent.Ok {
 			result = true
 		} else {
-			log.Printf("*** Failed to send error message: %s\n", *sent.Description)
+			log.Printf("*** Failed to send error message: %s", *sent.Description)
 		}
 	} else {
 		mime := http.DetectContentType(bytes)
@@ -265,12 +265,12 @@ func processExecuteRequest(b *bot.Bot, request ExecuteRequest) bool {
 				result = true
 			} else {
 				message := fmt.Sprintf("Failed to send photo: %s", *sent.Description)
-				log.Printf("*** %s\n", message)
+				log.Printf("*** %s", message)
 
-				if sent := b.SendMessage(request.ChatId, &message, request.MessageOptions); sent.Ok {
+				if sent := b.SendMessage(request.ChatId, message, request.MessageOptions); sent.Ok {
 					result = true
 				} else {
-					log.Printf("*** Failed to send error message: %s\n", *sent.Description)
+					log.Printf("*** Failed to send error message: %s", *sent.Description)
 				}
 			}
 		} else if strings.HasPrefix(mime, "video") { // video type
@@ -280,21 +280,21 @@ func processExecuteRequest(b *bot.Bot, request ExecuteRequest) bool {
 				result = true
 			} else {
 				message := fmt.Sprintf("Failed to send video: %s", *sent.Description)
-				log.Printf("*** %s\n", message)
+				log.Printf("*** %s", message)
 
-				if sent := b.SendMessage(request.ChatId, &message, request.MessageOptions); sent.Ok {
+				if sent := b.SendMessage(request.ChatId, message, request.MessageOptions); sent.Ok {
 					result = true
 				} else {
-					log.Printf("*** Failed to send error message: %s\n", *sent.Description)
+					log.Printf("*** Failed to send error message: %s", *sent.Description)
 				}
 			}
 		} else {
 			message := string(bytes)
 
-			if sent := b.SendMessage(request.ChatId, &message, request.MessageOptions); sent.Ok {
+			if sent := b.SendMessage(request.ChatId, message, request.MessageOptions); sent.Ok {
 				result = true
 			} else {
-				log.Printf("*** Failed to send message: %s\n", *sent.Description)
+				log.Printf("*** Failed to send message: %s", *sent.Description)
 			}
 		}
 	}
@@ -308,7 +308,7 @@ func main() {
 
 	// get info about this bot
 	if me := client.GetMe(); me.Ok {
-		log.Printf("Launching bot: @%s (%s)\n", *me.Result.Username, *me.Result.FirstName)
+		log.Printf("Launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
 
 		// delete webhook (getting updates will not work when wehbook is set up)
 		if unhooked := client.DeleteWebhook(); unhooked.Ok {
@@ -329,7 +329,7 @@ func main() {
 						processUpdate(b, update)
 					}
 				} else {
-					log.Printf("*** Error while receiving update (%s)\n", err.Error())
+					log.Printf("*** Error while receiving update (%s)", err.Error())
 				}
 			})
 		} else {
