@@ -261,7 +261,7 @@ func processExecuteRequest(b *bot.Bot, request ExecuteRequest) bool {
 		if strings.HasPrefix(mime, "image") { // image type
 			b.SendChatAction(request.ChatId, bot.ChatActionUploadPhoto)
 
-			if sent := b.SendPhoto(request.ChatId, bytes, request.MessageOptions); sent.Ok {
+			if sent := b.SendPhoto(request.ChatId, bot.InputFileFromBytes(bytes), request.MessageOptions); sent.Ok {
 				result = true
 			} else {
 				message := fmt.Sprintf("Failed to send photo: %s", *sent.Description)
@@ -276,7 +276,7 @@ func processExecuteRequest(b *bot.Bot, request ExecuteRequest) bool {
 		} else if strings.HasPrefix(mime, "video") { // video type
 			b.SendChatAction(request.ChatId, bot.ChatActionUploadVideo)
 
-			if sent := b.SendVideo(request.ChatId, bytes, request.MessageOptions); sent.Ok {
+			if sent := b.SendVideo(request.ChatId, bot.InputFileFromBytes(bytes), request.MessageOptions); sent.Ok {
 				result = true
 			} else {
 				message := fmt.Sprintf("Failed to send video: %s", *sent.Description)
