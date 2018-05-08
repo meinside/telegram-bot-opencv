@@ -18,34 +18,37 @@ import (
 	bot "github.com/meinside/telegram-bot-go"
 )
 
+// Status type
 type Status int16
 
+// Status constants
 const (
 	StatusWaiting Status = iota
 )
 
 const (
-	DefaultMonitorIntervalSeconds = 5 // for monitoring
+	defaultMonitorIntervalSeconds = 5 // for monitoring
 
-	NumQueue = 4 // size of queue
+	numQueue = 4 // size of queue
 
 	// commands
-	CommandStart    = "/start"
-	CommandExecute  = "/execute"
-	CommandShowCode = "/showcode"
+	commandStart    = "/start"
+	commandExecute  = "/execute"
+	commandShowCode = "/showcode"
 
 	// messages
-	MessageDefault        = "Input your command:"
-	MessageUnknownCommand = "Unknown command."
-	MessageErrorFormat    = "Error: %s"
+	messageDefault        = "Input your command:"
+	messageUnknownCommand = "Unknown command."
+	messageErrorFormat    = "Error: %s"
 )
 
+// Session struct
 type Session struct {
-	UserId        string
+	UserID        string
 	CurrentStatus Status
 }
 
-// session pool for storing individual statuses
+// SessionPool struct is a session pool for storing individual statuses
 type SessionPool struct {
 	Sessions map[string]Session
 	sync.Mutex
@@ -54,8 +57,9 @@ type SessionPool struct {
 // for making sure the camera is not used simultaneously
 var executeLock sync.Mutex
 
+// ExecuteRequest struct
 type ExecuteRequest struct {
-	ChatId         interface{}
+	ChatID         interface{}
 	MessageOptions map[string]interface{}
 }
 
@@ -70,18 +74,18 @@ var executeChannel chan ExecuteRequest
 
 // keyboards
 var allKeyboards = [][]bot.KeyboardButton{
-	bot.NewKeyboardButtons(CommandExecute),
-	bot.NewKeyboardButtons(CommandShowCode),
+	bot.NewKeyboardButtons(commandExecute),
+	bot.NewKeyboardButtons(commandShowCode),
 }
 
 const (
 	// constants for config
-	ConfigFilename = "config.json"
+	configFilename = "config.json"
 )
 
-// struct for config file
+// Config struct for config file
 type Config struct {
-	ApiToken        string   `json:"api_token"`
+	APIToken        string   `json:"api_token"`
 	AllowedIds      []string `json:"allowed_ids"`
 	MonitorInterval int      `json:"monitor_interval"`
 	ScriptPath      string   `json:"script_path"`
@@ -92,36 +96,40 @@ type Config struct {
 func getConfig() (config Config, err error) {
 	_, filename, _, _ := runtime.Caller(0) // = __FILE__
 
-	if file, err := ioutil.ReadFile(filepath.Join(path.Dir(filename), ConfigFilename)); err == nil {
+	file, err := ioutil.ReadFile(filepath.Join(path.Dir(filename), configFilename))
+	if err == nil {
 		var conf Config
-		if err := json.Unmarshal(file, &conf); err == nil {
+
+		err := json.Unmarshal(file, &conf)
+		if err == nil {
 			return conf, nil
-		} else {
-			return Config{}, err
 		}
-	} else {
+
 		return Config{}, err
 	}
+
+	return Config{}, err
 }
 
 // read code from the python script
 func readCode() string {
-	if bytes, err := ioutil.ReadFile(scriptPath); err == nil {
+	bytes, err := ioutil.ReadFile(scriptPath)
+	if err == nil {
 		return string(bytes)
-	} else {
-		return fmt.Sprintf(MessageErrorFormat, err)
 	}
+
+	return fmt.Sprintf(messageErrorFormat, err)
 }
 
 // initialization
 func init() {
 	// read variables from config file
 	if config, err := getConfig(); err == nil {
-		apiToken = config.ApiToken
+		apiToken = config.APIToken
 		allowedIds = config.AllowedIds
 		monitorInterval = config.MonitorInterval
 		if monitorInterval <= 0 {
-			monitorInterval = DefaultMonitorIntervalSeconds
+			monitorInterval = defaultMonitorIntervalSeconds
 		}
 		scriptPath = config.ScriptPath
 		isVerbose = config.IsVerbose
@@ -130,7 +138,7 @@ func init() {
 		sessions := make(map[string]Session)
 		for _, v := range allowedIds {
 			sessions[v] = Session{
-				UserId:        v,
+				UserID:        v,
 				CurrentStatus: StatusWaiting,
 			}
 		}
@@ -139,14 +147,14 @@ func init() {
 		}
 
 		// channels
-		executeChannel = make(chan ExecuteRequest, NumQueue)
+		executeChannel = make(chan ExecuteRequest, numQueue)
 	} else {
 		panic(err.Error())
 	}
 }
 
 // check if given Telegram id is available
-func isAvailableId(id string) bool {
+func isAvailableID(id string) bool {
 	for _, v := range allowedIds {
 		if v == id {
 			return true
@@ -158,14 +166,14 @@ func isAvailableId(id string) bool {
 // process incoming update from Telegram
 func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
-	var userId string
+	var userID string
 	if update.Message.From.Username == nil {
 		log.Printf("*** Not allowed (no user name): %s", update.Message.From.FirstName)
 		return false
 	}
-	userId = *update.Message.From.Username
-	if !isAvailableId(userId) {
-		log.Printf("*** Id not allowed: %s", userId)
+	userID = *update.Message.From.Username
+	if !isAvailableID(userID) {
+		log.Printf("*** Id not allowed: %s", userID)
 		return false
 	}
 
@@ -173,7 +181,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	result := false
 
 	pool.Lock()
-	if session, exists := pool.Sessions[userId]; exists {
+	if session, exists := pool.Sessions[userID]; exists {
 		// text from message
 		var txt string
 		if update.Message.HasText() {
@@ -183,7 +191,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		}
 
 		var message string
-		var options map[string]interface{} = map[string]interface{}{
+		var options = map[string]interface{}{
 			"reply_markup": bot.ReplyKeyboardMarkup{
 				Keyboard:       allKeyboards,
 				ResizeKeyboard: true,
@@ -195,30 +203,30 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		case StatusWaiting:
 			switch {
 			// start
-			case strings.HasPrefix(txt, CommandStart):
-				message = MessageDefault
+			case strings.HasPrefix(txt, commandStart):
+				message = messageDefault
 			// execute
-			case strings.HasPrefix(txt, CommandExecute):
+			case strings.HasPrefix(txt, commandExecute):
 				message = ""
 			// show code
-			case strings.HasPrefix(txt, CommandShowCode):
+			case strings.HasPrefix(txt, commandShowCode):
 				message = readCode()
 			// fallback
 			default:
 				if len(txt) > 0 {
-					message = fmt.Sprintf("%s: %s", txt, MessageUnknownCommand)
+					message = fmt.Sprintf("%s: %s", txt, messageUnknownCommand)
 				} else {
-					message = MessageUnknownCommand
+					message = messageUnknownCommand
 				}
 			}
 		}
 
 		if len(message) > 0 {
 			// 'typing...'
-			b.SendChatAction(update.Message.Chat.Id, bot.ChatActionTyping)
+			b.SendChatAction(update.Message.Chat.ID, bot.ChatActionTyping)
 
 			// send message
-			if sent := b.SendMessage(update.Message.Chat.Id, message, options); sent.Ok {
+			if sent := b.SendMessage(update.Message.Chat.ID, message, options); sent.Ok {
 				result = true
 			} else {
 				log.Printf("*** Failed to send message: %s", *sent.Description)
@@ -226,12 +234,12 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		} else {
 			// push to execute request channel
 			executeChannel <- ExecuteRequest{
-				ChatId:         update.Message.Chat.Id,
+				ChatID:         update.Message.Chat.ID,
 				MessageOptions: options,
 			}
 		}
 	} else {
-		log.Printf("*** Session does not exist for id: %s", userId)
+		log.Printf("*** Session does not exist for id: %s", userID)
 	}
 	pool.Unlock()
 
@@ -247,14 +255,14 @@ func processExecuteRequest(b *bot.Bot, request ExecuteRequest) bool {
 	defer executeLock.Unlock()
 
 	// 'typing...'
-	b.SendChatAction(request.ChatId, bot.ChatActionTyping)
+	b.SendChatAction(request.ChatID, bot.ChatActionTyping)
 
 	// execute script, read its output, and send it to the client
 	if bytes, err := exec.Command(scriptPath).CombinedOutput(); err != nil {
 		message := fmt.Sprintf("Error running script: %s (%s)", err, string(bytes))
 		log.Printf("*** %s", message)
 
-		if sent := b.SendMessage(request.ChatId, message, request.MessageOptions); sent.Ok {
+		if sent := b.SendMessage(request.ChatID, message, request.MessageOptions); sent.Ok {
 			result = true
 		} else {
 			log.Printf("*** Failed to send error message: %s", *sent.Description)
@@ -263,30 +271,30 @@ func processExecuteRequest(b *bot.Bot, request ExecuteRequest) bool {
 		mime := http.DetectContentType(bytes)
 
 		if strings.HasPrefix(mime, "image") { // image type
-			b.SendChatAction(request.ChatId, bot.ChatActionUploadPhoto)
+			b.SendChatAction(request.ChatID, bot.ChatActionUploadPhoto)
 
-			if sent := b.SendPhoto(request.ChatId, bot.InputFileFromBytes(bytes), request.MessageOptions); sent.Ok {
+			if sent := b.SendPhoto(request.ChatID, bot.InputFileFromBytes(bytes), request.MessageOptions); sent.Ok {
 				result = true
 			} else {
 				message := fmt.Sprintf("Failed to send photo: %s", *sent.Description)
 				log.Printf("*** %s", message)
 
-				if sent := b.SendMessage(request.ChatId, message, request.MessageOptions); sent.Ok {
+				if sent := b.SendMessage(request.ChatID, message, request.MessageOptions); sent.Ok {
 					result = true
 				} else {
 					log.Printf("*** Failed to send error message: %s", *sent.Description)
 				}
 			}
 		} else if strings.HasPrefix(mime, "video") { // video type
-			b.SendChatAction(request.ChatId, bot.ChatActionUploadVideo)
+			b.SendChatAction(request.ChatID, bot.ChatActionUploadVideo)
 
-			if sent := b.SendVideo(request.ChatId, bot.InputFileFromBytes(bytes), request.MessageOptions); sent.Ok {
+			if sent := b.SendVideo(request.ChatID, bot.InputFileFromBytes(bytes), request.MessageOptions); sent.Ok {
 				result = true
 			} else {
 				message := fmt.Sprintf("Failed to send video: %s", *sent.Description)
 				log.Printf("*** %s", message)
 
-				if sent := b.SendMessage(request.ChatId, message, request.MessageOptions); sent.Ok {
+				if sent := b.SendMessage(request.ChatID, message, request.MessageOptions); sent.Ok {
 					result = true
 				} else {
 					log.Printf("*** Failed to send error message: %s", *sent.Description)
@@ -295,7 +303,7 @@ func processExecuteRequest(b *bot.Bot, request ExecuteRequest) bool {
 		} else {
 			message := string(bytes)
 
-			if sent := b.SendMessage(request.ChatId, message, request.MessageOptions); sent.Ok {
+			if sent := b.SendMessage(request.ChatID, message, request.MessageOptions); sent.Ok {
 				result = true
 			} else {
 				log.Printf("*** Failed to send message: %s", *sent.Description)
